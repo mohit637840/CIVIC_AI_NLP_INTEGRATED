@@ -1,0 +1,11 @@
+{
+    "model": "TF-IDF + LinearSVC",
+    "language_support": "Multilingual",
+    "training_samples": 600,
+    "testing_samples": 150,
+    "number_of_categories": 15,
+    "accuracy": 0.7466666666666667,
+    "precision": 0.7653113553113552,
+    "recall": 0.7466666666666667,
+    "f1": 0.7455106265236835
+}
