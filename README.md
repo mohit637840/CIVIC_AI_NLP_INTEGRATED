@@ -13,7 +13,61 @@ FastAPI backend for the civic computer-vision and geospatial components.
 
 The teammate's existing TF-IDF + LinearSVC NLP pipeline is integrated through `app/services/nlp_service.py`. The original trained model artifacts are packaged under `app/integrations/nlp/jharkhand_multilingual_model/`.
 
-The submission endpoint runs only the modalities supplied by the citizen, preserves their raw structured outputs, and returns a deterministic rule-based fusion result. Fused priority and routing are now exposed both inside `fusion` and through the existing top-level response fields; duplicate detection remains reserved for the next stage.
+The submission endpoint runs only the modalities supplied by the citizen, preserves their raw structured outputs, and returns a deterministic rule-based fusion result. Fused priority and routing are now exposed both inside `fusion` and through the existing top-level response fields. Duplicate detection is now implemented as a deterministic retrieval → ranking → decision pipeline attached to the canonical submission context.
+
+## Duplicate detection engine
+
+The duplicate engine is intentionally conservative and extensible. It preserves the existing fusion flow and attaches the final duplicate result to each canonical submission without replacing NLP, CV, Geo, or rule-based fusion logic.
+
+### Current baseline
+
+- Representation type: `tfidf`
+- Embedding provider: `TfidfVectorizer(char_wb)`
+- Model family: TF-IDF text vector baseline, not a transformer semantic embedding
+- Repository: in-memory repository suitable for local development and testing, not a production vector database
+
+This is a baseline for retrieval and ranking only. It is useful for local duplicate detection and for rapid iteration while the project keeps the architecture ready for sentence-transformer or multilingual embedding providers later.
+
+### Pipeline stages
+
+1. Evidence extraction from the canonical submission and Fusion output.
+2. Representation building from complaint text, issue text, category, domain, location, severity, and issue metadata.
+3. Retrieval across complaint, issue, category, geo, and metadata signals.
+4. Candidate filtering to remove self-match, malformed entries, incompatible dimensions, and empty repositories.
+5. Ranking using semantic similarity, lexical overlap, issue compatibility, category compatibility, geo proximity, and structured visual evidence compatibility.
+6. Deterministic decision with `duplicate`, `possible_duplicate`, `not_duplicate`, `no_candidates`, `insufficient_data`, `unavailable` states.
+7. Explainable output with positive and negative evidence, deterministic reason codes, and provenance metadata.
+
+### Important terminology and limitations
+
+- TF-IDF is treated as a text-vector baseline. It is not claimed to be true semantic understanding.
+- The system supports multilingual evaluation but does not assume word overlap is sufficient across English, Hindi, and Hinglish.
+- Geo and visual evidence are supporting signals, not automatic duplicate rules.
+- Missing modalities do not count as negative evidence. They are simply unavailable and the active signal set is normalized over what is available.
+- Thresholds are engineering defaults and are not a calibrated probability estimate.
+
+### Retrieval vs decision
+
+Retrieval asks: "Could this complaint be related?"
+Decision asks: "Is this complaint actually a duplicate?"
+
+The engine keeps this distinction explicit: scores are tracked separately for retrieval, ranking, and decision output.
+
+### Explainability
+
+Final duplicate results include:
+
+- `status`
+- `best_match`
+- `candidates`
+- `signal_breakdown`
+- `positive_evidence`
+- `negative_evidence`
+- `reason_codes`
+- `decision`
+- `provenance`
+
+This makes duplicate decisions inspectable without exposing raw vectors in normal API responses.
 
 ## Fusion engine
 

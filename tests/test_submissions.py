@@ -26,7 +26,7 @@ def test_downstream_processors_consume_canonical_submission_context():
     assert routing_context.fusion.category.value
     assert routing_context.priority == routing_context.fusion.priority
     assert routing_context.routing == routing_context.fusion.routing
-    assert routing_context.duplicate is None
+    assert routing_context.duplicate is not None
 
 
 def test_submission_text_only():
